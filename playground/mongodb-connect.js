@@ -13,19 +13,24 @@ let getMongoClient = new Promise( (resolve, reject) => {
 	})
 })
 
-var insertItem = (item, collectionName) => {
-	const client = getMongoClient();
+async function insertItem(item, collectionName) {
+	const client = await getMongoClient;
 	const db = client.db(dbName);
 
-	db.collection(collectionName).insertOne(item, (err, res) => {
-		if(err) {
-			return console.log(`Unable to insert the document: ${err}`);
-		}
-		console.log(JSON.stringify(res.ops, undefined, 4));
-	})
+	const res = await db.collection(collectionName).insertOne(item);
+	console.log(JSON.stringify(res.ops, undefined, 4));
 
 	client.close()
 }
+
+async function deleteManyItems(item, collectionName) {
+	const client = await getMongoClient;
+	const db = client.db(dbName);
+	const res = await db.collection(collectionName).deleteMany(item);
+	console.log(`${res.result.n} element(s) deleted`);
+}
+
+// Could do the same with findOneAndDelete()
 
 async function findItem(collectionName, filter = undefined) {
 	const client = await getMongoClient;
@@ -36,4 +41,19 @@ async function findItem(collectionName, filter = undefined) {
 	client.close();
 }
 
-findItem("Users", {name:"Lucas"});
+async function updateToDo(filter, updates) {
+	const client = await getMongoClient;
+	const db = client.db(dbName);
+	const res = await db.collection("ToDos").findOneAndUpdate(filter, updates, {returnOriginal: false});
+	console.log(res);
+
+	client.close();
+}
+
+var completeToDo = (filter) => updateToDo(filter, {$set : {completed: true}});
+
+completeToDo({text: "Walk the dog"});
+// updateToDo({text: "Walk the dog"}, {$set: {completed: false}});
+
+//deleteManyItems({text: "Todo1"}, "ToDos")
+// insertItem({text: "Todo4", completed: false}, "ToDos");
