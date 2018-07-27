@@ -7,17 +7,17 @@ const {Todo, getTodoById} = require("./models/todo");
 const {User} = require("./models/user");
 
 const instructions = {
-	{
-		instruction: "POST /todos",
+	instruction: {
+		request: "POST /todos",
 		params: "text : String",
 		result: "Add a todo"
 	},
-	{
-		instruction: "GET /todos",
+	instruction: {
+		request: "GET /todos",
 		result: "Print all todos"
 	},
-	{
-		instruction: "GET /todos/ID",
+	instruction: {
+		request: "GET /todos/ID",
 		params: "ID as a valid ObjectID",
 		result: "Print the todo witch matching ID"
 	}
