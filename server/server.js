@@ -6,11 +6,30 @@ const {mongoose} = require("./db/mongoose");
 const {Todo, getTodoById} = require("./models/todo");
 const {User} = require("./models/user");
 
+const instructions = {
+	{
+		instruction: "POST /todos",
+		params: "text : String",
+		result: "Add a todo"
+	},
+	{
+		instruction: "GET /todos",
+		result: "Print all todos"
+	},
+	{
+		instruction: "GET /todos/ID",
+		params: "ID as a valid ObjectID",
+		result: "Print the todo witch matching ID"
+	}
+}
+
 var app = express();
 
 const port = process.env.PORT ||3000;
 
 app.use(bodyParser.json());
+
+app.get("/", (req, res) => res.send(JSON.stringify(instructions, undefined, 4)));
 
 app.post("/todos", (req, res) => {
 	var todo = new Todo({
