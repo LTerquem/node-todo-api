@@ -1,8 +1,9 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 
+const {ObjectID} = require("mongodb");
 const {mongoose} = require("./db/mongoose");
-const {Todo} = require("./models/todo");
+const {Todo, getTodoById} = require("./models/todo");
 const {User} = require("./models/User");
 
 var app = express();
@@ -22,7 +23,15 @@ app.get("/todos", (req, res) => {
 	Todo.find()
 		.then( todos => res.send({todos}))
 		.catch( err => res.send(err));
-})
+});
+
+app.get("/todos/:id", (req, res) => {
+
+	getTodoById(req.params.id)
+		.then(todo => {
+			return res.status(todo.statusCode).send(todo.body);
+		});
+});
 
 app.listen(3000, () => {
 	console.log("Started on port 3000");

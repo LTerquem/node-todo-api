@@ -1,10 +1,13 @@
 const expect = require("expect");
 const request = require("supertest");
+const {ObjectId} = require("mongodb");
 
 const {app} = require("./../server");
 const {Todo} = require("./../models/todo");
 
+const id = "5b598f0849ffcf1acc0b6326";
 const seedTodos = [{
+	_id : id,
 	text: "first test todo"
 }, {
 	text: "second test todo"
@@ -57,11 +60,39 @@ describe("POST /todo", () => {
 });
 
 describe("GET /todos", () => {
-	it("should return an object with todos property set todos", done => {
+	it("should return an object with todos property ", done => {
 		request(app)
 			.get("/todos")
 			.expect(200)
 			.expect(res => expect(res.body.todos.length).toBe(2))
 			.end(done);
-	})
+	});
+
+	describe("GET /todos/id", () => {
+		it("should return a single Todo", done => {
+			request(app)
+				.get(`/todos/${id}`)
+				.expect(200)
+				.expect(res => expect(res.body.todo).toBeTruthy())
+				.end(done);
+		});
+
+		it("should return a 404", done => {
+			request(app)
+				.get(`/todos/${id}111`)
+				.expect(404)
+				.expect(res => expect(res.body.todo).toBeFalsy()) //Should not return any Todos
+				.expect(res => expect(res.body.errorMessage).toBeTruthy()) //Should return an error message
+				.end(done);
+		});
+
+		it("should return an error message with a 200", done => {
+			request(app)
+				.get(`/todos/${new ObjectId()}`)
+				.expect(200)
+				.expect(res => expect(res.body.todo).toBeFalsy()) //Should not return any Todos
+				.expect(res => expect(res.body.errorMessage).toBeTruthy())	//Should return an error message
+				.end(done);
+		});
+	});
 })
