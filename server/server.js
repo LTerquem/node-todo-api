@@ -7,16 +7,16 @@ const {Todo, getTodoById} = require("./models/todo");
 const {User} = require("./models/user");
 
 const instructions = {
-	instruction: {
+	instruction1: {
 		request: "POST /todos",
 		params: "text : String",
 		result: "Add a todo"
 	},
-	instruction: {
+	instruction2: {
 		request: "GET /todos",
 		result: "Print all todos"
 	},
-	instruction: {
+	instruction3: {
 		request: "GET /todos/ID",
 		params: "ID as a valid ObjectID",
 		result: "Print the todo witch matching ID"
@@ -52,6 +52,15 @@ app.get("/todos/:id", (req, res) => {
 		.then(todo => {
 			return res.status(todo.statusCode).send(todo.body);
 		});
+});
+
+app.get("/remove", (req, res) => {
+	Todo.remove({});
+	res.send("All the todos have been removed !");
+});
+
+app.get("/remove/:id", (req, res) => {
+	Todo.findByIdAndDelete(req.params.	id).then(doc => res.send(`Removed the todo "${doc.text}"`));
 });
 
 app.listen(port, () => {
