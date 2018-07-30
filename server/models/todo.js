@@ -36,6 +36,29 @@ async function getTodoById(id) {
 		statusCode: 200,
 		body: {todo}
 		};
-}
+};
 
-module.exports = {Todo, getTodoById};
+async function deleteTodoById(id) {
+	if(!ObjectID.isValid(id)) {
+	return {
+		statusCode: 404, 
+		body: {errorMessage: "Invalid object ID"}
+		};
+	}
+	const todo = await Todo.findByIdAndDelete(id);
+	if(!todo) {
+		return {
+			statusCode: 200,
+			body: {errorMessage: "No todo with corresponding ID found"}
+		};
+	}
+	return {
+		statusCode: 200,
+		body: {
+			message: "This Todo has been deleted :",
+			todo
+			}
+		};
+};
+
+module.exports = {Todo, getTodoById, deleteTodoById};

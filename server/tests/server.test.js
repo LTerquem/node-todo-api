@@ -6,11 +6,15 @@ const {app} = require("./../server");
 const {Todo} = require("./../models/todo");
 
 const id = "5b598f0849ffcf1acc0b6326";
+const otherId = new ObjectId();
 const seedTodos = [{
 	_id : id,
 	text: "first test todo"
 }, {
-	text: "second test todo"
+	_id: otherId,
+	text: "second test todo",
+	completed: true,
+	completedAt: 666
 }]
 
 beforeEach( done => {
@@ -96,3 +100,129 @@ describe("GET /todos", () => {
 		});
 	});
 })
+
+describe("DELETE /todos", () => {
+	it("should delete a todo", done => {
+		request(app)
+			.delete(`/todos/${id}`)
+			.expect(200)
+			.end(res => {
+				Todo.find().then(todos => {
+					expect(todos.length).toBe(1);
+					expect(todos[0].text).toBe("second test todo");
+				Todo.findById(id).then(todo => expect(todo).toBeNull());
+				});
+				done();
+			});
+	});
+
+	it("should say that no matching todo was found", done => {
+		request(app)
+			.delete(`/todos/${new ObjectId()}`)
+			.expect(200)
+			.expect(res => {
+				Todo.find().then(todos => expect(todos.length).toBe(2));
+				expect(res.body.errorMessage).toBe("No todo with corresponding ID found");
+			})
+			.end(done);
+	});
+
+	it("should return a 404", done => {
+		request(app)
+			.delete("/todos/1")
+			.expect(404)
+			.expect(res => expect(res.body.errorMessage).toBe("Invalid object ID"))
+			.end(done);
+	});
+
+	it("should delete all todos", done => {
+		request(app)
+			.delete("/todos")
+			.expect(200)
+			.end((err, res) => {
+				if(err) {
+					return done(err);
+				}
+				Todo.find().then(todos => expect(todos.length).toBe(0));
+				done();
+			});
+	});
+});
+
+describe("PATCH /todos/:id", () => {
+	it("should update the todo", done => {
+		request(app)
+		.patch(`/todos/${id}`)
+		.send({"text": "updated text", "completed": true})
+		.expect(200)
+		.end( (err, res) => {
+			if(err) {
+				return done(err);
+			}
+			Todo.find().then(todos => {
+				expect(todos.length).toBe(2);
+				expect(todos[0].text).toBe("updated text");
+				expect(todos[0].completed).toBe(true);
+				expect(todos[0].completedAt).not.toBeNull()
+				done();
+			});
+		});
+	});
+
+	it("should clear the completedAt property", done => {
+		request(app)
+		.patch(`/todos/${otherId}`)
+		.send({"completed": false})
+		.expect(200)
+		.end( (err, res) => {
+			if(err) {
+				return done(err);
+			}
+			Todo.find().then(todos => {
+				expect(todos.length).toBe(2);
+				expect(todos[1].text).toBe("second test todo");
+				expect(todos[1].completed).toBe(false);
+				expect(todos[1].completedAt).toBeNull()
+				done();
+			});
+		});
+	});
+
+	it("should not find the todo", done => {
+		request(app)
+		.patch(`/todos/${id +1}`)
+		.send({"text": "updated text", "completed": true})
+		.expect(404)
+		.end( (err, res) => {
+			if(err) {
+				return done(err);
+			}
+			Todo.find().then(todos => {
+				expect(todos.length).toBe(2);
+				expect(todos[0].text).not.toBe("updated text");
+				expect(todos[0].completed).toBe(false);
+				expect(todos[0].completedAt).toBeNull()
+				done();
+			});
+		});
+	});
+
+	it("should send a 404", done => {
+		request(app)
+		.patch(`/todos/${id}1`)
+		.send({"text": "updated text", "completed": true})
+		.expect(404)
+		.end( (err, res) => {
+			if(err) {
+				return done(err);
+			}
+			Todo.find().then(todos => {
+				expect(todos.length).toBe(2);
+				expect(todos[0].text).not.toBe("updated text");
+				expect(todos[0].completed).toBe(false);
+				expect(todos[0].completedAt).toBeNull()
+				done();
+			});
+		});
+	});
+});
