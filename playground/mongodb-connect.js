@@ -5,7 +5,7 @@ const dbUrl = "mongodb://127.0.0.1:27017"
 const dbName = "ToDoApp"
 
 let getMongoClient = new Promise( (resolve, reject) => {
-	MongoClient.connect(dbUrl, (err, client) => {
+	MongoClient.connect(dbUrl, { useNewUrlParser: true }, (err, client) => {
 		if (err) {
 			reject(`An error has occured : ${err}`);
 		}
