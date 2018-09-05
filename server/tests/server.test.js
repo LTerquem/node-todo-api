@@ -1,5 +1,6 @@
 const expect = require("expect");
 const request = require("supertest");
+const jwt = require("jsonwebtoken")
 const {ObjectId} = require("mongodb");
 
 const {app} = require("./../server");
@@ -258,14 +259,14 @@ describe("POST /user", () => {
 					expect(user.email).toEqual(email);
 					expect(user.password).not.toEqual(password);
 					done();
-				})
+				}).catch(e => done(e))
 			})
 	});
 
 	it("should return validation errors if request invalid", done => {
 		request(app)
 			.post("/users")
-			.send({email:"caca", password:"caca"})
+			.send({email:"azer", password:"ty"})
 			.expect(400)
 			.end( (err,res) => {
 				if(err) {
@@ -296,4 +297,72 @@ describe("POST /user", () => {
 					});
 			});
 	});
+})
+
+describe("POST /users/login", () => {
+	it("should return a user and its auth token", done => {
+		request(app)
+			.post("/users/login")
+			.send({email: seedUsers[1].email, password: seedUsers[1].password})
+			.expect(200)
+			.expect( res => {
+				expect(res.header["x-auth"]).toBeDefined();		
+			})
+			.end( (err, res) => {
+				if(err) {
+					return done(err);
+				}
+				User.findOne({email:seedUsers[1].email}).then( user => {
+					expect(user).toBeDefined();
+					expect(user.email).toEqual(seedUsers[1].email);
+					expect(user.password).not.toEqual(seedUsers[1].password);
+					expect(jwt.verify(user.tokens[0].token, "abc123"));
+					return done();
+				}).catch(e => done(e))
+			})
+	});
+
+	it("should not enable the user to login (wrong email)", done => {
+		request(app)
+			.post("/users/login")
+			.send({email: seedUsers[1].email+"az", password: seedUsers[1].password})
+			.expect(400)
+			.expect( res => {
+				expect(res.header["x-auth"]).not.toBeDefined();		
+			})
+			.end( (err, res) => {
+				if(err) {
+					return done(err);
+				}
+				User.findOne({email:seedUsers[1].email}).then( user => {
+					expect(user).toBeDefined();
+					expect(user.email).toEqual(seedUsers[1].email);
+					expect(user.password).not.toEqual(seedUsers[1].password);
+					expect(user.tokens[0]).not.toBeDefined();
+					return done();
+				}).catch(e => done(e))
+			})
+	});
+
+	it("should not enable the user to login (wrong password)", done => {
+		request(app)
+			.post("/users/login")
+			.send({email: seedUsers[1].email, password: seedUsers[1].password+"a"})
+			.expect(400)
+			.expect( res => {
+				expect(res.header["x-auth"]).not.toBeDefined();		
+			})
+			.end( (err, res) => {
+				if(err) {
+					return done(err);
+				}
+				User.findOne({email:seedUsers[1].email}).then( user => {
+					expect(user).toBeDefined();
+					expect(user.email).toEqual(seedUsers[1].email);
+					expect(user.password).not.toEqual(seedUsers[1].password);
+					expect(user.tokens[0]).not.toBeDefined();
+					return done();
+				}).catch(e => done(e))
+			})
+	});	
 })
