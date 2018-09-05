@@ -366,3 +366,22 @@ describe("POST /users/login", () => {
 			})
 	});	
 })
+
+describe("DELETE /users/logout",  () => {
+	it("should delete the auth token of the user", done => {
+		request(app)
+			.delete("/users/logout")
+			.set("x-auth", seedUsers[0].tokens[0].token)
+			.expect(200)
+			.end((err, res) => {
+				if(err) {
+					return done(err);
+				}
+				User.findOne({email: seedUsers[0].email}).then( user => {
+					expect(user).toBeDefined();
+					expect(user.tokens[0]).not.toBeDefined();
+					return done();
+				}).catch(e => done(e))
+			})
+	})
+})
