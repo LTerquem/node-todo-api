@@ -17,6 +17,7 @@ describe("POST /todo", () => {
 		var text = "Test ToDo creation";
 		request(app)
 			.post("/todos")
+			.set("x-auth",seedUsers[0].tokens[0].token)
 			.send({text})
 			.expect(200)
 			.expect( res => expect(res.body.text).toBe(text))
@@ -37,6 +38,7 @@ describe("POST /todo", () => {
 	it("should not create a todo - invalid body data", done => {
 		request(app)
 			.post("/todos")
+			.set("x-auth",seedUsers[0].tokens[0].token)
 			.send({})
 			.expect(400)
 			.end( (err, res) => {
@@ -56,8 +58,9 @@ describe("GET /todos", () => {
 	it("should return an object with todos property ", done => {
 		request(app)
 			.get("/todos")
+			.set("x-auth",seedUsers[0].tokens[0].token)
 			.expect(200)
-			.expect(res => expect(res.body.todos.length).toBe(2))
+			.expect(res => expect(res.body.todos.length).toBe(1))
 			.end(done);
 	});
 
@@ -65,6 +68,7 @@ describe("GET /todos", () => {
 		it("should return a single Todo", done => {
 			request(app)
 				.get(`/todos/${seedTodos[0]._id}`)
+				.set("x-auth",seedUsers[0].tokens[0].token)
 				.expect(200)
 				.expect(res => expect(res.body.todo).toBeTruthy())
 				.end(done);
@@ -73,18 +77,30 @@ describe("GET /todos", () => {
 		it("should return a 404", done => {
 			request(app)
 				.get(`/todos/${seedTodos[0]._id}111`)
+				.set("x-auth",seedUsers[0].tokens[0].token)
 				.expect(404)
 				.expect(res => expect(res.body.todo).toBeFalsy()) //Should not return any Todos
 				.expect(res => expect(res.body.errorMessage).toBeTruthy()) //Should return an error message
 				.end(done);
 		});
 
-		it("should return an error message with a 200", done => {
+		it("should return an error message with a 404", done => {
 			request(app)
 				.get(`/todos/${new ObjectId()}`)
-				.expect(200)
+				.set("x-auth",seedUsers[0].tokens[0].token)
+				.expect(404)
 				.expect(res => expect(res.body.todo).toBeFalsy()) //Should not return any Todos
-				.expect(res => expect(res.body.errorMessage).toBeTruthy())	//Should return an error message
+				.expect(res => expect(res.body.errorMessage).toBe("Todo not found"))	//Should return an error message
+				.end(done);
+		});
+
+		it("should not be able to access a todo made by another user", done => {
+			request(app)
+				.get(`/todos/${seedTodos[0]._id}`)
+				.set("x-auth",seedUsers[1].tokens[0].token)
+				.expect(404)
+				.expect(res => expect(res.body.todo).toBeFalsy()) //Should not return any Todos
+				.expect(res => expect(res.body.errorMessage).toBeTruthy()) //Should return an error message
 				.end(done);
 		});
 	});
@@ -94,24 +110,41 @@ describe("DELETE /todos", () => {
 	it("should delete a todo", done => {
 		request(app)
 			.delete(`/todos/${seedTodos[0]._id}`)
+			.set("x-auth",seedUsers[0].tokens[0].token)
 			.expect(200)
 			.end(res => {
 				Todo.find().then(todos => {
 					expect(todos.length).toBe(1);
 					expect(todos[0].text).toBe("second test todo");
-				Todo.findById(seedTodos[0]._id).then(todo => expect(todo).toBeNull());
+					Todo.findById(seedTodos[0]._id).then(todo => {
+						expect(todo).toBeNull();
+						done();
+					});
 				});
-				done();
+			});
+	});
+
+	it("should not be able to delete a todo created by another user", done => {
+		request(app)
+			.delete(`/todos/${seedTodos[1]._id}`)
+			.set("x-auth",seedUsers[0].tokens[0].token)
+			.expect(404)
+			.end(res => {
+				Todo.find().then(todos => {
+					expect(todos.length).toBe(2);
+					done();
+				});
 			});
 	});
 
 	it("should say that no matching todo was found", done => {
 		request(app)
 			.delete(`/todos/${new ObjectId()}`)
-			.expect(200)
+			.set("x-auth",seedUsers[0].tokens[0].token)
+			.expect(404)
 			.expect(res => {
 				Todo.find().then(todos => expect(todos.length).toBe(2));
-				expect(res.body.errorMessage).toBe("No todo with corresponding ID found");
+				expect(res.body.errorMessage).toBe("Todo not found");
 			})
 			.end(done);
 	});
@@ -119,8 +152,9 @@ describe("DELETE /todos", () => {
 	it("should return a 404", done => {
 		request(app)
 			.delete("/todos/1")
+			.set("x-auth",seedUsers[0].tokens[0].token)
 			.expect(404)
-			.expect(res => expect(res.body.errorMessage).toBe("Invalid object ID"))
+			.expect(res => expect(res.body.errorMessage).toBe("Invalid Object ID"))
 			.end(done);
 	});
 
@@ -128,11 +162,12 @@ describe("DELETE /todos", () => {
 		request(app)
 			.delete("/todos")
 			.expect(200)
+			.set("x-auth",seedUsers[0].tokens[0].token)
 			.end((err, res) => {
 				if(err) {
 					return done(err);
 				}
-				Todo.find().then(todos => expect(todos.length).toBe(0));
+				Todo.find({_creator: seedUsers[0]._id}).then(todos => expect(todos.length).toBe(0));
 				done();
 			});
 	});
@@ -142,6 +177,7 @@ describe("PATCH /todos/:id", () => {
 	it("should update the todo", done => {
 		request(app)
 		.patch(`/todos/${seedTodos[0]._id}`)
+		.set("x-auth",seedUsers[0].tokens[0].token)
 		.send({"text": "updated text", "completed": true})
 		.expect(200)
 		.end( (err, res) => {
@@ -158,9 +194,27 @@ describe("PATCH /todos/:id", () => {
 		});
 	});
 
+	it("should not be able to update the todo created by another user", done => {
+		request(app)
+		.patch(`/todos/${seedTodos[1]._id}`)
+		.set("x-auth",seedUsers[0].tokens[0].token)
+		.send({"text": "updated text", "completed": true})
+		.expect(404)
+		.end( (err, res) => {
+			if(err) {
+				return done(err);
+			}
+			Todo.find().then(todos => {
+				expect(todos.length).toBe(2);
+				expect(todos[1].text).toEqual(seedTodos[1].text);
+				done();
+			});
+		});
+	});
 	it("should clear the completedAt property", done => {
 		request(app)
 		.patch(`/todos/${seedTodos[1]._id}`)
+		.set("x-auth",seedUsers[1].tokens[0].token)
 		.send({"completed": false})
 		.expect(200)
 		.end( (err, res) => {
@@ -180,6 +234,7 @@ describe("PATCH /todos/:id", () => {
 	it("should not find the todo", done => {
 		request(app)
 		.patch(`/todos/${seedTodos[0]._id +1}`)
+		.set("x-auth",seedUsers[0].tokens[0].token)
 		.send({"text": "updated text", "completed": true})
 		.expect(404)
 		.end( (err, res) => {
@@ -199,6 +254,7 @@ describe("PATCH /todos/:id", () => {
 	it("should send a 404", done => {
 		request(app)
 		.patch(`/todos/${seedTodos[0]._id}1`)
+		.set("x-auth",seedUsers[0].tokens[0].token)
 		.send({"text": "updated text", "completed": true})
 		.expect(404)
 		.end( (err, res) => {
@@ -238,7 +294,7 @@ describe("GET /users/me", () => {
 })
 
 describe("POST /user", () => {
-	it("should create a users", done => {
+	it("should create a user", done => {
 		var email = "azerty@gmail.com";
 		var password = "pass1234";
 		request(app)
@@ -316,7 +372,7 @@ describe("POST /users/login", () => {
 					expect(user).toBeDefined();
 					expect(user.email).toEqual(seedUsers[1].email);
 					expect(user.password).not.toEqual(seedUsers[1].password);
-					expect(jwt.verify(user.tokens[0].token, "abc123"));
+					expect(jwt.verify(user.tokens[1].token, "abc123"));
 					return done();
 				}).catch(e => done(e))
 			})
@@ -338,7 +394,7 @@ describe("POST /users/login", () => {
 					expect(user).toBeDefined();
 					expect(user.email).toEqual(seedUsers[1].email);
 					expect(user.password).not.toEqual(seedUsers[1].password);
-					expect(user.tokens[0]).not.toBeDefined();
+					expect(user.tokens.length).toEqual(1);
 					return done();
 				}).catch(e => done(e))
 			})
@@ -360,7 +416,7 @@ describe("POST /users/login", () => {
 					expect(user).toBeDefined();
 					expect(user.email).toEqual(seedUsers[1].email);
 					expect(user.password).not.toEqual(seedUsers[1].password);
-					expect(user.tokens[0]).not.toBeDefined();
+					expect(user.tokens.length).toEqual(1);
 					return done();
 				}).catch(e => done(e))
 			})

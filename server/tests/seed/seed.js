@@ -12,12 +12,14 @@ const otherUserId = new ObjectId();
 
 const seedTodos = [{
 	_id : todoId,
-	text: "first test todo"
+	text: "first test todo",
+	_creator: userId
 }, {
 	_id: otherTodoId,
 	text: "second test todo",
 	completed: true,
-	completedAt: 666
+	completedAt: 666,
+	_creator: otherUserId
 }]
 
 const seedUsers = [
@@ -33,7 +35,11 @@ const seedUsers = [
 	{
 		_id: otherUserId,
 		email: "azer@gmail.com",
-		password: "password456"
+		password: "password456",
+		tokens: [{
+			access:"auth",
+			token: jwt.sign({_id: otherUserId.toHexString(), access: "auth"}, "abc123").toString()
+		}]
 	}
 ]
 
