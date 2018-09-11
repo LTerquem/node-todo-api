@@ -372,7 +372,7 @@ describe("POST /users/login", () => {
 					expect(user).toBeDefined();
 					expect(user.email).toEqual(seedUsers[1].email);
 					expect(user.password).not.toEqual(seedUsers[1].password);
-					expect(jwt.verify(user.tokens[1].token, "abc123"));
+					expect(jwt.verify(user.tokens[1].token, process.env.JWT_SECRET));
 					return done();
 				}).catch(e => done(e))
 			})

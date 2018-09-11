@@ -29,7 +29,7 @@ const seedUsers = [
 		password: "password123",
 		tokens: [{
 			access:"auth",
-			token: jwt.sign({_id: userId.toHexString(), access: "auth"}, "abc123").toString()
+			token: jwt.sign({_id: userId.toHexString(), access: "auth"}, process.env.JWT_SECRET).toString()
 		}]
 	},
 	{
@@ -38,7 +38,7 @@ const seedUsers = [
 		password: "password456",
 		tokens: [{
 			access:"auth",
-			token: jwt.sign({_id: otherUserId.toHexString(), access: "auth"}, "abc123").toString()
+			token: jwt.sign({_id: otherUserId.toHexString(), access: "auth"}, process.env.JWT_SECRET).toString()
 		}]
 	}
 ]
